@@ -17,18 +17,20 @@ class Config(object):
     def _chain(self, *mappings):
         return ChainMap(*mappings)
 
+    def _create(self):
+        with open(self._config_file, 'x') as handle:
+            json.dump({}, handle)
+
+    def _merged_from_json_handle(self, handle):
+        return self._merge(self.persistent, json.load(handle))
+
     def load(self):
         if self._config_file:
             try:
                 with open(self._config_file, 'r') as handle:
-                    data = json.load(handle)
-                    self.persistent = self._merge(self.persistent, data)
-            except FileNotFoundError:
-                open(self._config_file, 'x').close()
-                self.load()
+                    self.persistent = self._merged_from_json_handle(handle)
             except IOError as err:
-                print(err)
-                sys.exit(1)
+                raise Exception('Could not load config file') from err
 
         if self._override_sources:
             for source in self._override_sources:
@@ -38,7 +40,7 @@ class Config(object):
 
     def save(self):
         if self.persistent:
-            with open(self._config_file, 'wx') as handle:
+            with open(self._config_file, 'w') as handle:
                 json.dump(self.persistent, handle)
 
 
